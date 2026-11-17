@@ -597,7 +597,8 @@ public class HomeFurnitureController implements Controller {
     switch (property) {
       case VOLUME : 
         return false;
-      case DESCRIPTION :
+      case DESCRIPTION:
+        return true;
       case PRICE :
         return false;
       case LIGHT_POWER :
