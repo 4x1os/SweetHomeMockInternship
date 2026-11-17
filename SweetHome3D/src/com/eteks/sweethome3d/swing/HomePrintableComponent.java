@@ -37,16 +37,12 @@ import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.Set;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ArrayList;
+
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 
@@ -128,8 +124,7 @@ public class HomePrintableComponent extends JComponent implements Printable {
   private int                  page;
   private int                  pageCount = -1;
   private Set<Integer>         printablePages = new HashSet<Integer>();
-  private Map<Level, Integer>  planPageCounts = new HashMap<Level, Integer>();
-  private int                  furniturePageCount; 
+  private int                  furniturePageCount;
   private int                  planPageCount;
   private Date                 printDate;
   private JLabel               fixedHeaderLabel;
@@ -387,7 +382,7 @@ public class HomePrintableComponent extends JComponent implements Printable {
         && planView != null 
         && (homePrint == null || homePrint.isPlanPrinted())) {
       // Try to print next plan view page
-      pageExists = printPlanPage(g2D, pageFormat, (Printable)planView, page - this.furniturePageCount);
+      pageExists = ((Printable)planView).print(g2D, pageFormat, page - this.furniturePageCount);
       if (pageExists == PAGE_EXISTS
           && !this.printablePages.contains(page)) {
         this.printablePages.add(page);
@@ -432,52 +427,6 @@ public class HomePrintableComponent extends JComponent implements Printable {
     return pageExists;
   }
   
-  /**
-   * Prints the plan page at <code>planPage</code> index, considering that the plan pages
-   * of each viewable level follow each other, from the lowest level to the highest one.
-   * The selected level is changed during the print, and restored at the end.
-   */
-  private int printPlanPage(Graphics2D g2D, PageFormat pageFormat, Printable planView, int planPage)
-      throws PrinterException {
-    List<Level> printedLevels = new ArrayList<Level>();
-    for (Level level : this.home.getLevels()) {
-      if (level.isViewable()) {
-        printedLevels.add(level);
-      }
-    }
-    if (printedLevels.isEmpty()) {
-      // No level to select
-      return planView.print(g2D, pageFormat, planPage);
-    }
-
-    Level selectedLevel = this.home.getSelectedLevel();
-    try {
-      for (Level level : printedLevels) {
-        this.home.setSelectedLevel(level);
-        Integer levelPageCount = this.planPageCounts.get(level);
-        if (levelPageCount == null) {
-          // Count the pages of this level by printing them in an empty clip
-          Graphics2D countGraphics = (Graphics2D)g2D.create();
-          countGraphics.setClip(0, 0, 0, 0);
-          int count = 0;
-          while (planView.print(countGraphics, pageFormat, count) == PAGE_EXISTS) {
-            count++;
-          }
-          countGraphics.dispose();
-          levelPageCount = count;
-          this.planPageCounts.put(level, levelPageCount);
-        }
-        if (planPage >= 0 && planPage < levelPageCount) {
-          return planView.print(g2D, pageFormat, planPage);
-        }
-        planPage -= levelPageCount;
-      }
-      return NO_SUCH_PAGE;
-    } finally {
-      this.home.setSelectedLevel(selectedLevel);
-    }
-  }
-
   /**
    * Returns the preferred size of this component according to paper orientation and size
    * of home print attributes.
